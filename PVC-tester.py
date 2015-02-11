@@ -18,7 +18,7 @@ v0.3, hatem Ghorbel, HE-Arc
 # Ces modules doivent être dans le PYTHONPATH; p.ex. dans le répertoire courant
 
 modules = (
-	"MAA09",
+	"DeruazRosser",
 	# Éventuellement d'autres modules pour comparer plusieurs versions...
 )
 
@@ -28,12 +28,12 @@ modules = (
 # <maxtime> le temps (en secondes) imparti pour la résolution
 tests = (
     ('data/pb005.txt',1),
-    #~ ('data/pb010.txt',5),
-    #~ ('data/pb010.txt',10),
-    #~ ('data/pb050.txt',30),
-    #~ ('data/pb050.txt',60),
-    #~ ('data/pb100.txt',20),
-    #~ ('data/pb100.txt',90),
+    ('data/pb010.txt',5),
+    ('data/pb010.txt',10),
+    ('data/pb050.txt',30),
+    ('data/pb050.txt',60),
+    ('data/pb100.txt',20),
+    ('data/pb100.txt',90),
 )
 
 # On tolère un dépassement de 5% du temps imparti:
@@ -59,8 +59,8 @@ import os
 from time import time
 from math import hypot
 
-def dist(x1,y1,x2,y2):
-    return hypot(x2 -x1,y2-y1)
+def dist(xy1,xy2):	# x1,y1,x2,y2 -> ne peut recevoir un tuple (x,y),(x,y) ???
+    return hypot(xy2[0] - xy1[0],xy2[1] - xy1[1])
 
 def validate(filename, length, path, duration, maxtime):
     '''Validation de la solution
@@ -72,10 +72,10 @@ def validate(filename, length, path, duration, maxtime):
     if duration>maxtime * (1+tolerance):
         error += "Timeout (%.2f) " % (duration-maxtime)
     try:
-        cities = dict([(name, (int(x),int(y))) for name,x,y in [l.split() for l in file(filename)]])
+        cities = dict([(name, (int(x),int(y))) for name,x,y in [l.split() for l in open(filename)]])	# file(filename) ???
     except:
         return "(Validation failed...)"
-    tovisit = cities.keys()
+    tovisit = list(cities.keys()) # passage en list ???
     
     try:
         totaldist = 0
