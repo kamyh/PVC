@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+'''
+
+@author: vincent.deruaz, mathieu.rosser
+'''
 
 def ga_solve(file=None, gui=True, maxtime=0):
 	
@@ -119,19 +126,26 @@ class Gui():
 
 if __name__ == '__main__':
 	
-	import sys
 	import argparse
 
-# 	parser = argparse.ArgumentParser(description='PVC')
-# 	parser.add_argument('--nogui', dest='accumulate', action='store_const',
-# 	                   const=sum, default=max,
-# 	                   help='sum the integers (default: find the max)')
-# 	parser.add_argument('integers', metavar='N', type=int, nargs='+',
-#                    help='an integer for the accumulator')
-
-
-
+	parser = argparse.ArgumentParser(description="Problème du voyageur de commerce avec algorithme génétique")
 	
-	ga_solve("data/pb005.txt")
+	parser.add_argument('--nogui', action="store_true", help="Ne pas afficher l'interface graphique")
+	parser.add_argument('--maxtime', type=int, action="store", help="Arrêter la recherche après maxtime secondes")
+	parser.add_argument("filename", type=str, default=None, nargs="?", help="Fichier contenant les villes à visiter")
 
+	args = parser.parse_args()
+	
+	gui = not args.nogui
+	maxtime = args.maxtime
+	file = args.filename
+	
+	print("Gui: %d"%gui)
+	print("Maxtime: %d"%maxtime)
+	print("File: %s" %file)
+	print()
 
+	total_distance, cities = ga_solve(file, gui, maxtime)
+	
+	print("Distance totale:\n\t %d" %total_distance)
+	print("Villes à visiter dans l'ordre:\n\t %s" %str(cities))
