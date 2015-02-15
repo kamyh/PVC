@@ -9,6 +9,7 @@
 import math
 import time
 from random import randint
+from random import shuffle
 import pygame
 from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
 
@@ -43,28 +44,22 @@ class PVC():
 		
 		self.last_distances = []
 		
-	def compute(self, gui=None):
-# 		print("compute")
-# 		print(self.cities)
-		
+	def compute(self, gui=None):		
 		self.start = time.clock()
 		self.i = 0
-		population = Population(self.ordered_cities)
+		self.population = Population(self.ordered_cities)
 
 		while not self.is_ended():
-# 			print("x")
-			population.update()
+			self.population.update()
 			
-			self.ordered_cities = population.solutions[0].cities
-			self.total_distance = population.solutions[0].distance()
-						
+			self.ordered_cities = self.population.solutions[0].cities
+			self.total_distance = self.population.solutions[0].distance()
+							
 			self.last_distances.append(self.total_distance)
 			
 			if gui:
 				gui.draw()
-			
-# 		print(population)
-		
+					
 	def is_ended(self):
 		self.total_time = time.clock() - self.start
 		
@@ -72,103 +67,171 @@ class PVC():
 			return self.total_time >= self.maxtime
 		
 		length = len(self.last_distances)
-				
-		if length > 50:
+		
+		print(length)
+		if length > Population.SIZE / 10:	# TODO: changer 200, varier selon le nb de villes par exp
 			self.last_distances.pop(0)
 			length -= 1
-			
-			print(self.last_distances)
-			
+
 			mean_dist = sum(self.last_distances) / length
 			std_dev = math.sqrt(1 / length * sum([pow(x - mean_dist, 2) for x in self.last_distances]))
 
 			print(std_dev)
-			
-			return std_dev <= 1e-11
+			return std_dev <= 1e-10	# vérifier epsylon
 		
 		return False
-		
-		
-# 		self.i += 1
-# 		
-# 		return self.i <= 100
+
 		
 class Population():
+	# TODO: taille ? ajuster selon nb de villes ?
+	SIZE = 100	# paire
 	
 	def __init__(self, cities):
 		basic_solution = Solution(list(cities))
 		
 		self.solutions = [basic_solution]
 		
-		# doublons ???
-		for _ in range(10):
+		# TODO: doublons ???
+		for _ in range(Population.SIZE - 1):
 			s = basic_solution.clone()
 			
-			for _ in range(5):
-				s.mutate()
+			s.randomize()
+			
+# 			for _ in range(50):
+# 				s.mutate(True)
 			
 			self.solutions.append(s)
 			
 		self.order_by_distance()
-		
-# 		print("test")
-			
+					
 	def __repr__(self):
 		return str(self.solutions)
 	
 	def order_by_distance(self):
 		self.solutions.sort(key=Solution.distance)
 		
+		while len(self.solutions) > Population.SIZE:
+			self.solutions.pop()
+		
 	def update(self):
 		
 		# 1. Sélection (manquante ici!)
 		# 2. Croisements et mutations, on essaye de garder quelques élites...
-		
-		elite = math.ceil(len(self.solutions) / 3)
+				
+		elite = Population.SIZE // 20
 		if elite % 2 != 0:
 			elite += 1
-		
-		solutions_elite = [self.solutions[i] for i in range(elite)]
-		
-		j = -1
-		
-		for i in range(elite - 1):
-			child1, child2 = solutions_elite[i].crossover(solutions_elite[i + 1])
-			self.solutions[j] = child1
-			self.solutions[j - 1] = child2
 			
-			j -= 2
+		elite = 4
 		
-# 		solution1, solution2 = self.solutions[0], self.solutions[1]
-# 		solution3, solution4 = self.solutions[2], self.solutions[3]
-# 		
-# 		child1, child2 = solution1.crossover(solution2)
-# 		child3, child4 = solution3.crossover(solution4)
-# 		
-# 		self.solutions[-1] = child1
-# 		self.solutions[-2] = child2
-# 		self.solutions[-3] = child3
-# 		self.solutions[-4] = child4
+		# TODO: optimiser
 		
-		rate = 0
-		for c in self.solutions:
-			if rate % 5 == 0:
-				c.mutate()
-			rate += 1
+		new_solutions = self.solutions[:elite]
+		
+		for i in range(elite):
+			new_solutions.append(new_solutions[i].clone().mutate(True))
 			
+			if i < elite - 1:
+				child1, child2 = self.solutions[i].crossover(self.solutions[i + 1], True)
+				new_solutions.append(child1.mutate(True))
+				new_solutions.append(child2.mutate(True))
+		
+		while len(new_solutions) < Population.SIZE:
+			a, b = self.random_solution_index()
+			#print("a, b = %d, %d" %(a, b))
+
+			child1, child2 = self.solutions[a].crossover(self.solutions[b])
+			
+			new_solutions.append(child1.mutate())
+			new_solutions.append(child2.mutate())
+
+		self.solutions = new_solutions
+		
 		self.order_by_distance()
+		
+		""" mutation elite """	
+# 		for i in range(elite):
+# 			self.solutions.append(self.solutions[i].clone().mutate(True))
+		
+		""" croisement élite """
+# 		j = -1
+# 		
+# 		for i in range(0, elite - 1, 2):
+# 			child1, child2 = solutions_elite[i].crossover(solutions_elite[i + 1])
+# 			self.solutions.append(child1)
+# 			self.solutions.append(child2)
+# 		
+# 			j -= 2
+		
+		""" nouveaux croisements / mutations """
+# 		while len(self.solutions) < 2 * Population.SIZE:
+# 			a = randint(0, Population.SIZE - 1)
+# 			b = randint(0, Population.SIZE - 1)
+# 			
+# 			child1, child2 = self.solutions[a].crossover(self.solutions[b])
+# 			if child1 is not None:
+# 				self.solutions.append(child1)
+# 				self.solutions.append(child2)
+
+		""" ajout croisement/mutation """
+# 		for _ in range(0, Population.SIZE - 1, 2):
+# 			a = randint(0, Population.SIZE - 1)
+# 			b = randint(0, Population.SIZE - 1)
+# 			
+# 			child1, child2 = self.solutions[a].crossover(self.solutions[b])
+# # 			self.solutions[i] = child1.mutate()
+# # 			self.solutions[i + 1] = child2.mutate()
+# 			self.solutions.append(child1.mutate())
+# 			self.solutions.append(child2.mutate())
+
+# 		for i in range(elite, 2 * Population.SIZE):
+# 			self.solutions[i].mutate()
+		
+
+		""" mutation complète """
+# 		for c in self.solutions:
+# 			c.mutate()
+
+		""" croisement élite - remplacement """
+# 		j = -1
+# 		
+# 		for i in range(0, elite - 1, 2):
+# 			child1, child2 = solutions_elite[i].crossover(solutions_elite[i + 1])
+# 			self.solutions[j] = child1
+# 			self.solutions[j - 1] = child2
+# 			
+# 			j -= 2					
+	
+	def random_solution_index(self):
+		good_index = randint(0, 100) <= 50
+		# TODO: utile ?
+		max_index = Population.SIZE - 1 if not good_index else Population.SIZE // 2
+		#print("MAX=%d" %max_index)
+		return randint(0, max_index), randint(0, max_index)
+
 					
 
 class Solution():
+	# TODO: taille
 	DIVISOR_CROSSOVER = 3
 
 	def __init__(self, cities):
 		self.cities = cities
 		
-	def mutate(self):
-		ind1, ind2 = self.random_index()
+	def randomize(self):
+		shuffle(self.cities)
 		
+	def mutate(self, force_mutation=False):
+		# TODO: taux ?
+		if not force_mutation and randint(0, 100) >= 90:
+# 			print("notmutate")
+			return self
+		
+# 		print("mutate")
+		
+		ind1, ind2 = self.random_index()
 		self.cities[ind1], self.cities[ind2] = self.cities[ind2], self.cities[ind1]
+		
 		return self
 	
 	def clone(self):
@@ -176,9 +239,23 @@ class Solution():
 		
 	def random_index(self):
 		ind = len(self.cities) - 1
-		return randint(0, ind), randint(0, ind)
+		a, b = 0, 0
+		
+		while a == b:
+			a = randint(0, ind)
+			b = randint(0, ind)
+			
+		return a, b 
 	
-	def crossover(self, solution2):
+	def crossover(self, solution2, force_crossover=False):
+		# TODO: taux ?
+		if not force_crossover and randint(0, 100) >= 90:
+# 			print("notcross")
+			return self.clone(), solution2.clone()
+			return None, None
+		
+# 		print("cross")
+		
 		length = len(self.cities)
 		ind_max = length - 1
 		length_cross = math.floor(ind_max / Solution.DIVISOR_CROSSOVER)
@@ -261,17 +338,16 @@ class City():
 class Gui():
 	
 	def __init__(self, pvc):		
-# 		cities = pvc.cities
 		self.pvc = pvc
 		self.display_path = False
 		
 		screen_x = 500
 		screen_y = 500
 		
-		self.city_color = [255,255,255] # blue
+		self.city_color = [255,255,255]
 		self.city_radius = 2
 		
-		self.font_color = [255,255,255] # white
+		self.font_color = [255,255,255]
 		
 		pygame.init()
 		window = pygame.display.set_mode((screen_x, screen_y))
@@ -311,6 +387,11 @@ class Gui():
 			if event.type == KEYDOWN or event.type == QUIT: break
 
 	def draw(self):
+		# prévenir le freeze de la GUI
+		for event in pygame.event.get():
+			if event.type == QUIT:
+				exit(0)
+
 		self.screen.fill(0)
 		for c in self.pvc.ordered_cities:
 			pygame.draw.circle(self.screen, self.city_color, c.pos(), self.city_radius)
