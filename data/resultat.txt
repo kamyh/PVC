@@ -1,3 +1,5 @@
+v1
+
 data\pb005.txt (1s);903;
 data\pb010.txt (5s);1490;
 data\pb010.txt (10s);1490;
@@ -5,3 +7,35 @@ data\pb050.txt (30s);4180;
 data\pb050.txt (60s);4506;
 data\pb100.txt (20s);7322;
 data\pb100.txt (90s);6856;
+
+v2
+
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb050.txt (30s);4260;
+data\pb050.txt (60s);3576;
+data\pb100.txt (20s);6439;
+data\pb100.txt (90s);6398;
+
+v3
+
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb050.txt (30s);4439;
+data\pb050.txt (60s);3736;
+data\pb100.txt (20s);9398;
+data\pb100.txt (90s);8112;
+
+v4
+
+Test;DeruazRosser;
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb020.txt (10s);1998;
+data\pb050.txt (30s);3910;
+data\pb050.txt (60s);4214;
+data\pb100.txt (20s);7354;
+data\pb100.txt (90s);6208;

@@ -30,6 +30,7 @@ tests = (
     ('data/pb005.txt',1),
     ('data/pb010.txt',5),
     ('data/pb010.txt',10),
+	('data/pb020.txt',10),
     ('data/pb050.txt',30),
     ('data/pb050.txt',60),
     ('data/pb100.txt',20),
