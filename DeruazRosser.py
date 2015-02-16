@@ -69,7 +69,7 @@ class PVC():
 		length = len(self.last_distances)
 		
 		print(length)
-		if length > Population.SIZE / 10:	# TODO: changer 200, varier selon le nb de villes par exp
+		if length > self.population.size / 10:	# TODO: changer 200, varier selon le nb de villes par exp
 			self.last_distances.pop(0)
 			length -= 1
 
@@ -87,12 +87,13 @@ class Population():
 	SIZE = 100	# paire
 	
 	def __init__(self, cities):
+		self.size = 4 * len(cities)
 		basic_solution = Solution(list(cities))
 		
 		self.solutions = [basic_solution]
 		
 		# TODO: doublons ???
-		for _ in range(Population.SIZE - 1):
+		for _ in range(self.size - 1):
 			s = basic_solution.clone()
 			
 			s.randomize()
@@ -110,7 +111,7 @@ class Population():
 	def order_by_distance(self):
 		self.solutions.sort(key=Solution.distance)
 		
-		while len(self.solutions) > Population.SIZE:
+		while len(self.solutions) > self.size:
 			self.solutions.pop()
 		
 	def update(self):
@@ -118,7 +119,7 @@ class Population():
 		# 1. Sélection (manquante ici!)
 		# 2. Croisements et mutations, on essaye de garder quelques élites...
 				
-		elite = Population.SIZE // 20
+		elite = self.size // 20
 		if elite % 2 != 0:
 			elite += 1
 			
@@ -136,7 +137,7 @@ class Population():
 				new_solutions.append(child1.mutate(True))
 				new_solutions.append(child2.mutate(True))
 		
-		while len(new_solutions) < Population.SIZE:
+		while len(new_solutions) < self.size:
 			a, b = self.random_solution_index()
 			#print("a, b = %d, %d" %(a, b))
 
@@ -205,7 +206,7 @@ class Population():
 	def random_solution_index(self):
 		good_index = randint(0, 100) <= 50
 		# TODO: utile ?
-		max_index = Population.SIZE - 1 if not good_index else Population.SIZE // 2
+		max_index = self.size - 1 if not good_index else self.size // 2
 		#print("MAX=%d" %max_index)
 		return randint(0, max_index), randint(0, max_index)
 
@@ -213,17 +214,19 @@ class Population():
 
 class Solution():
 	# TODO: taille
-	DIVISOR_CROSSOVER = 3
+	DIVISOR_CROSSOVER = 5
 
 	def __init__(self, cities):
 		self.cities = cities
+		self.divisor = len(cities) // 2
+		#print(self.divisor)
 		
 	def randomize(self):
 		shuffle(self.cities)
 		
 	def mutate(self, force_mutation=False):
 		# TODO: taux ?
-		if not force_mutation and randint(0, 100) >= 90:
+		if not force_mutation and randint(0, 100) >= 101:
 # 			print("notmutate")
 			return self
 		
@@ -231,7 +234,7 @@ class Solution():
 		
 		ind1, ind2 = self.random_index()
 		self.cities[ind1], self.cities[ind2] = self.cities[ind2], self.cities[ind1]
-		
+
 		return self
 	
 	def clone(self):
@@ -249,7 +252,7 @@ class Solution():
 	
 	def crossover(self, solution2, force_crossover=False):
 		# TODO: taux ?
-		if not force_crossover and randint(0, 100) >= 90:
+		if not force_crossover and randint(0, 100) >= 101:
 # 			print("notcross")
 			return self.clone(), solution2.clone()
 			return None, None
@@ -258,7 +261,7 @@ class Solution():
 		
 		length = len(self.cities)
 		ind_max = length - 1
-		length_cross = math.floor(ind_max / Solution.DIVISOR_CROSSOVER)
+		length_cross = math.floor(ind_max / self.divisor)
 		ind_start = randint(1, ind_max - length_cross)
 # 		print(ind_start)
 		ind_stop = ind_start + length_cross - 1
