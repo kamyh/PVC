@@ -39,3 +39,14 @@ data\pb050.txt (30s);3910;
 data\pb050.txt (60s);4214;
 data\pb100.txt (20s);7354;
 data\pb100.txt (90s);6208;
+
+v5
+
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb020.txt (10s);2033;
+data\pb050.txt (30s);4443;
+data\pb050.txt (60s);3559;
+data\pb100.txt (20s);11794; !!
+data\pb100.txt (90s);8425;  !!

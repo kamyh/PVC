@@ -4,6 +4,9 @@
 '''
 Algorithme génétique pour résolution du problème du voyageur de commerce - PVC
 
+Résoud un PVC, soit à partir d'un fichier ou d'une interface graphique avec mise à jour visuelle ou non (gui)
+La résolution s'arrête lorsqu'une stagnation est constatée ou après un temps maximum
+
 @author: vincent.deruaz, mathieu.rosser
 '''
 
@@ -16,9 +19,11 @@ from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
 
 def ga_solve(file=None, gui=True, maxtime=0):
 	'''
-		résoud un PVC, soit à partir d'un fichier ou d'une interface graphique
-		avec mise à jour visuelle ou non (gui)
-		le problème
+		Résolution d'un PVC
+		@param file: 	fichier de villes à charger
+		@param gui: 	affiche l'interface graphique
+		@param maxtime: temps maximum de calcul
+		@return: 		la distance totale calculée, la liste des villes dans l'ordre de passage
 	'''
 	if file is None:
 		cities = []
@@ -38,6 +43,10 @@ def ga_solve(file=None, gui=True, maxtime=0):
 	return pvc.total_distance, cities_names
 	
 class PVC():
+	''' 
+		Classe résolvant un PVC, à partir d'une liste de villes, dans un temps maximum ou jusqu'à stagnation 
+		Résultats: total_distance, total_time, ordered_cities
+	'''
 	
 	def __init__(self, cities, maxtime):
 		self.cities = cities
@@ -49,9 +58,9 @@ class PVC():
 		
 		self.last_distances = []
 		
-	def compute(self, gui=None):		
+	def compute(self, gui=None):	
+		''' résoud un PVC à partir des données courantes '''
 		self.start = time.clock()
-		self.i = 0
 		self.population = Population(self.ordered_cities)
 
 		while not self.is_ended():
@@ -66,6 +75,7 @@ class PVC():
 				gui.draw()
 					
 	def is_ended(self):
+		''' vérifie se calcul est terminé par stagnation ou temps '''
 		self.total_time = time.clock() - self.start
 		
 		if (self.maxtime is not None and self.maxtime > 0):
@@ -88,11 +98,15 @@ class PVC():
 
 		
 class Population():
+	''' 
+		Classe représentant une population de solutions
+		La population évolue par sélection, croisement et mutation
+	'''
 	# TODO: taille ? ajuster selon nb de villes ?
 	SIZE = 100	# paire
 	
 	def __init__(self, cities):
-		self.size = min(4 * len(cities), 500)
+		self.size = min(4 * len(cities), 70)
 		basic_solution = Solution(list(cities))
 		
 		self.solutions = [basic_solution]
@@ -120,7 +134,7 @@ class Population():
 			self.solutions.pop()
 		
 	def update(self):
-		
+		''' mise à jour de la population par sélection, croisement et mutation '''
 		# 1. Sélection (manquante ici!)
 		# 2. Croisements et mutations, on essaye de garder quelques élites...
 				
@@ -221,6 +235,10 @@ class Population():
 					
 
 class Solution():
+	'''
+		Classe représentant une solution de chemin entre des villes
+		La solution peut muter ou se croiser avec une autre pour produire des enfants
+	'''
 	# TODO: taille
 	DIVISOR_CROSSOVER = 5
 
@@ -233,6 +251,7 @@ class Solution():
 		shuffle(self.cities)
 		
 	def mutate(self, force_mutation=False):
+		''' effectue une mutation de la solution en échangeant deux villes dans le chemin '''
 		# TODO: taux ?
 		if not force_mutation and randint(0, 100) >= 101:
 # 			print("notmutate")
@@ -259,6 +278,7 @@ class Solution():
 		return a, b 
 	
 	def crossover(self, solution2, force_crossover=False):
+		''' effectue un croisement OX entre la solution courante et la solution2, génèrant deux fils '''
 		# TODO: taux ?
 		if not force_crossover and randint(0, 100) >= 101:
 # 			print("notcross")
@@ -289,6 +309,7 @@ class Solution():
 		return Solution(new_cities1), Solution(new_cities2)
 	
 	def crossover_ox(self, solution, new_cities, ind_stop, length):
+		''' implémentation du croisement OX entre une solution et le fils généré en partie '''
 		j = ind_stop + 1
 		for i in range(j, ind_stop + length):
 			city = solution.cities[i % length]
@@ -303,6 +324,7 @@ class Solution():
 
 	
 	def distance(self):
+		''' calcule la distance totale du chemin représenté par la solution ''' 
 		distance = 0.0
 		
 		old_city = self.cities[-1]
@@ -314,12 +336,17 @@ class Solution():
 		return distance
 	
 	def distance_euclidean(self, city1, city2):
+		''' calcule la distance entre 2 villes de la solution '''
 		return math.hypot(city1.x - city2.x, city1.y - city2.y)
 
 	def __repr__(self):
 		return str(self.cities)
 
 class Parser():
+	''' 
+		Classe effectuant la lecture d'une liste de villes 
+	'''
+	
 	def __init__(self, path):
 		self.path = path
 		
@@ -332,6 +359,10 @@ class Parser():
 				self.cities.append(City(name, int(x), int(y)))
 
 class City():
+	'''
+		Classe représentant une ville, avec son nom et sa position (X,Y)
+	'''
+	
 	def __init__(self, name, x, y):
 		self.name = name
 		self.x = x
@@ -347,8 +378,14 @@ class City():
 		return self.__str__()
 
 class Gui():
+	'''
+		Classe gérant l'interface graphique, avec dessin des villes, ajout de villes par clic et résolution du PVC
+		Reçoit un objet PVC en paramètres, avec une possible liste de villes chargées depuis un fichier
+		Lors de la résolution du PVC, le meilleur chemin reliant les villes est dessiné
+	'''
 	
 	def __init__(self, pvc):		
+		''' initialise la GUI, l'affiche, attend l'ajout de villes par l'utilisateur et effectue le calcul du PVC '''
 		self.pvc = pvc
 		self.display_path = False
 		
@@ -398,6 +435,7 @@ class Gui():
 			if event.type == KEYDOWN or event.type == QUIT: break
 
 	def draw(self):
+		''' dessine les villes dans la GUI et le meilleur chemin calculé lors du calcul PVC '''
 		# prévenir le freeze de la GUI
 		for event in pygame.event.get():
 			if event.type == QUIT:
@@ -423,7 +461,11 @@ class Gui():
 		pygame.display.flip()
 
 if __name__ == '__main__':
-	
+	'''
+		Programme principal exécutable en ligne de commande avec les paramètres suivants:
+			DeruazRosser.py [--nogui] [--maxtime s] [filename]
+		Parse les paramètres, exécute la résolution du PVC selon les paramètres et affiche les résultats
+	'''
 	import argparse
 
 	parser = argparse.ArgumentParser(description="Problème du voyageur de commerce avec algorithme génétique")
