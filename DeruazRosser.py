@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 '''
+Algorithme génétique pour résolution du problème du voyageur de commerce - PVC
 
 @author: vincent.deruaz, mathieu.rosser
 '''
@@ -14,7 +15,11 @@ import pygame
 from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
 
 def ga_solve(file=None, gui=True, maxtime=0):
-	
+	'''
+		résoud un PVC, soit à partir d'un fichier ou d'une interface graphique
+		avec mise à jour visuelle ou non (gui)
+		le problème
+	'''
 	if file is None:
 		cities = []
 	else:
@@ -68,15 +73,15 @@ class PVC():
 		
 		length = len(self.last_distances)
 		
-		print(length)
-		if length > self.population.size / 10:	# TODO: changer 200, varier selon le nb de villes par exp
+# 		print(length)
+		if length > 4 * self.population.size:	# TODO: changer 200, varier selon le nb de villes par exp
 			self.last_distances.pop(0)
 			length -= 1
 
 			mean_dist = sum(self.last_distances) / length
 			std_dev = math.sqrt(1 / length * sum([pow(x - mean_dist, 2) for x in self.last_distances]))
 
-			print(std_dev)
+# 			print(std_dev)
 			return std_dev <= 1e-10	# vérifier epsylon
 		
 		return False
@@ -87,7 +92,7 @@ class Population():
 	SIZE = 100	# paire
 	
 	def __init__(self, cities):
-		self.size = 4 * len(cities)
+		self.size = min(4 * len(cities), 500)
 		basic_solution = Solution(list(cities))
 		
 		self.solutions = [basic_solution]
@@ -119,11 +124,11 @@ class Population():
 		# 1. Sélection (manquante ici!)
 		# 2. Croisements et mutations, on essaye de garder quelques élites...
 				
-		elite = self.size // 20
-		if elite % 2 != 0:
-			elite += 1
+# 		elite = self.size // 20
+# 		if elite % 2 != 0:
+# 			elite += 1
 			
-		elite = 4
+		elite = 2
 		
 		# TODO: optimiser
 		
@@ -143,8 +148,11 @@ class Population():
 
 			child1, child2 = self.solutions[a].crossover(self.solutions[b])
 			
-			new_solutions.append(child1.mutate())
-			new_solutions.append(child2.mutate())
+			if child1 not in new_solutions:
+				new_solutions.append(child1.mutate())
+				
+			if child2 not in new_solutions:
+				new_solutions.append(child2.mutate())
 
 		self.solutions = new_solutions
 		
@@ -204,9 +212,9 @@ class Population():
 # 			j -= 2					
 	
 	def random_solution_index(self):
-		good_index = randint(0, 100) <= 50
+		good_index = randint(0, 100) <= 75
 		# TODO: utile ?
-		max_index = self.size - 1 if not good_index else self.size // 2
+		max_index = self.size - 1 if not good_index else self.size // 4
 		#print("MAX=%d" %max_index)
 		return randint(0, max_index), randint(0, max_index)
 
