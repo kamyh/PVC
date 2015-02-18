@@ -12,8 +12,7 @@ La résolution s'arrête lorsqu'une stagnation est constatée ou après un temps
 
 import math
 import time
-from random import randint
-from random import shuffle
+import random
 import pygame
 from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN, K_ESCAPE
 
@@ -106,7 +105,7 @@ class Population():
 	SIZE = 100	# paire
 	
 	def __init__(self, cities):
-		self.size = min(4 * len(cities), 70)
+		self.size = min(4 * len(cities), 50)
 		basic_solution = Solution(list(cities))
 		
 		self.solutions = [basic_solution]
@@ -142,31 +141,41 @@ class Population():
 # 		if elite % 2 != 0:
 # 			elite += 1
 			
-		elite = 2
+		taux_elite = 0.20
+		elite = int(self.size * taux_elite)
 		
 		# TODO: optimiser
 		
 		new_solutions = self.solutions[:elite]
 		
-		for i in range(elite):
-			new_solutions.append(new_solutions[i].clone().mutate(True))
-			
-			if i < elite - 1:
-				child1, child2 = self.solutions[i].crossover(self.solutions[i + 1], True)
-				new_solutions.append(child1.mutate(True))
-				new_solutions.append(child2.mutate(True))
+# 		for i in range(elite):
+# 			new_solutions.append(new_solutions[i].clone().mutate(True))
+# 			
+# 			if i < elite - 1:
+# 				child1, child2 = self.solutions[i].crossover(self.solutions[i + 1], True)
+# 				new_solutions.append(child1.mutate(True))
+# 				new_solutions.append(child2.mutate(True))
 		
 		while len(new_solutions) < self.size:
-			a, b = self.random_solution_index()
+# 			a, b = self.random_solution_index()
 			#print("a, b = %d, %d" %(a, b))
+			a = self.roulette_selection()
+			b = self.roulette_selection()
 
-			child1, child2 = self.solutions[a].crossover(self.solutions[b])
+			#child1, child2 = self.solutions[a].crossover(self.solutions[b])
 			
-			if child1 not in new_solutions:
-				new_solutions.append(child1.mutate())
+# 			child1, child2 = a.crossover(b)
+			child1 = a.crossover_greedy(b)
+			child2 = b.crossover_greedy(a)
+			
+			#if child1 not in new_solutions:
+			new_solutions.append(child1)
 				
-			if child2 not in new_solutions:
-				new_solutions.append(child2.mutate())
+			#if child2 not in new_solutions:
+			new_solutions.append(child2)
+			
+		for s in new_solutions:
+			s.mutate()
 
 		self.solutions = new_solutions
 		
@@ -223,16 +232,43 @@ class Population():
 # 			self.solutions[j] = child1
 # 			self.solutions[j - 1] = child2
 # 			
-# 			j -= 2					
+# 			j -= 2	
 	
 	def random_solution_index(self):
-		good_index = randint(0, 100) <= 75
+		good_index = random.randint(0, 100) < 0
 		# TODO: utile ?
 		max_index = self.size - 1 if not good_index else self.size // 4
 		#print("MAX=%d" %max_index)
-		return randint(0, max_index), randint(0, max_index)
+		return random.randint(0, max_index), random.randint(0, max_index)
 
-					
+	def roulette_selection(self):
+		max_dist = self.solutions[-1].distance()
+		
+		s = 0
+
+		for c in self.solutions:
+			#print(c.distance())
+			s += int(abs(c.distance() - max_dist))
+			
+		r = random.randint(0, s)
+		
+# 		print("R=%d" %r)
+		
+		s = 0
+		selection = self.solutions[0]
+		
+		for c in self.solutions:			
+			s += int(abs(c.distance() - max_dist))
+			
+			if s >= r:
+				#print("test R=%d, S=%d D=%d" %(r, s, c.distance()))
+				selection = c
+				break
+			
+# 		print("S = %d" %selection.distance())
+			
+		return selection
+
 
 class Solution():
 	'''
@@ -245,23 +281,26 @@ class Solution():
 	def __init__(self, cities):
 		self.cities = cities
 		self.divisor = len(cities) // 2
+		self._distance = None
 		#print(self.divisor)
 		
 	def randomize(self):
-		shuffle(self.cities)
+		random.shuffle(self.cities)
 		
 	def mutate(self, force_mutation=False):
 		''' effectue une mutation de la solution en échangeant deux villes dans le chemin '''
 		# TODO: taux ?
-		if not force_mutation and randint(0, 100) >= 101:
-# 			print("notmutate")
+		if not force_mutation and random.randint(0, 100) >= 10:
+			print("notmutate")
 			return self
 		
-# 		print("mutate")
+		print("mutate")
 		
 		ind1, ind2 = self.random_index()
 		self.cities[ind1], self.cities[ind2] = self.cities[ind2], self.cities[ind1]
 
+		self._distance = None
+		
 		return self
 	
 	def clone(self):
@@ -272,25 +311,25 @@ class Solution():
 		a, b = 0, 0
 		
 		while a == b:
-			a = randint(0, ind)
-			b = randint(0, ind)
+			a = random.randint(0, ind)
+			b = random.randint(0, ind)
 			
 		return a, b 
 	
 	def crossover(self, solution2, force_crossover=False):
 		''' effectue un croisement OX entre la solution courante et la solution2, génèrant deux fils '''
 		# TODO: taux ?
-		if not force_crossover and randint(0, 100) >= 101:
-# 			print("notcross")
+		if not force_crossover and random.randint(0, 100) >= 50:
+			print("notcross")
 			return self.clone(), solution2.clone()
-			return None, None
+			#return None, None
 		
-# 		print("cross")
+		print("cross")
 		
 		length = len(self.cities)
 		ind_max = length - 1
 		length_cross = math.floor(ind_max / self.divisor)
-		ind_start = randint(1, ind_max - length_cross)
+		ind_start = random.randint(1, ind_max - length_cross)
 # 		print(ind_start)
 		ind_stop = ind_start + length_cross - 1
 		
@@ -325,15 +364,18 @@ class Solution():
 	
 	def distance(self):
 		''' calcule la distance totale du chemin représenté par la solution ''' 
-		distance = 0.0
-		
-		old_city = self.cities[-1]
-		
-		for city in self.cities:
-			distance += self.distance_euclidean(city, old_city)
-			old_city = city
+		if self._distance is None:
+			distance = 0.0
+			
+			old_city = self.cities[-1]
+			
+			for city in self.cities:
+				distance += self.distance_euclidean(city, old_city)
+				old_city = city
+				
+			self._distance = distance
 
-		return distance
+		return self._distance
 	
 	def distance_euclidean(self, city1, city2):
 		''' calcule la distance entre 2 villes de la solution '''
@@ -341,6 +383,48 @@ class Solution():
 
 	def __repr__(self):
 		return str(self.cities)
+	
+	def crossover_greedy(self, solution2):
+
+		fa = True
+		fb = True
+		
+		t = random.choice(self.cities)
+		
+		x = self.cities.index(t)
+		y = solution2.cities.index(t)
+		
+		g = [t]
+		
+		n = len(self.cities)
+		
+		while fa == True or fb == True:
+			x = (x - 1) % n
+			y = (y + 1) % n
+			
+			if fa == True:
+				if self.cities[x] not in g:
+					g.insert(0, self.cities[x])
+				else:
+					fa = False
+					
+			if fb == True:
+				if solution2.cities[y] not in g:
+					g.append(solution2.cities[y])
+				else:
+					fb = False
+					
+					
+		if len(g) < len(self.cities):
+			l = list(self.cities)
+			random.shuffle(l)
+			
+			for c in l:
+				if c not in g:
+					g.append(c)
+		
+		return Solution(g)
+		
 
 class Parser():
 	''' 
