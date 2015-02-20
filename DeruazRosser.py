@@ -11,7 +11,7 @@ Fonction de fitness/évaluation:
 	Distance totale du chemin de chaque solution
 	
 Sélection mise en place:
-	Elitisime: sélection de N meilleures solutions selon taille de population, 30% au maximum
+	Elitisime: sélection de N meilleures solutions - 30% de la population
 	Roulette: sélection pour nouvelle population, donnant plus de probabilité de choix aux solutions courtes
 	
 Croisement:
@@ -34,7 +34,6 @@ import time
 import random
 import pygame
 import argparse
-import itertools
 from pygame.locals import KEYDOWN, QUIT, MOUSEBUTTONDOWN, K_RETURN
 
 def ga_solve(file=None, gui=True, maxtime=0):
@@ -126,7 +125,7 @@ class PVC():
 		length = len(self.last_distances)
 		
 		# vérification de la population de fin par stagnation si au moins N derniers calculs
-		if length > PVC.FACTOR_END_SIZE * self.population.size:
+		if length > PVC.FACTOR_END_SIZE * Population.SIZE:
 			# calcul de la moyenne et de l'écart-type avec les N dernières meilleures distances
 			mean_dist = sum(self.last_distances) / length
 			std_dev = math.sqrt(1 / length * sum([pow(x - mean_dist, 2) for x in self.last_distances]))
@@ -147,7 +146,7 @@ class Population():
 	''' 
 		Classe représentant une population de solutions
 		La population évolue par sélection, croisement et mutation
-		La sélection utilise un certain nombre d'élites (en fonction de la taille de population, 30% au maximum)
+		La sélection utilise un certain nombre d'élites - 30% de la population
 		La sélection est faite par la suite avec l'algorithme de roulette (les solutions les + courtes ont + de chance d'être prises)
 		Le croisement effectué est le croisement greedy selon un certain taux (cf classe Solution)
 		La mutation effectuée est un échange aléatoire de deux villes selon un certain taux (cf classe Solution)
@@ -155,17 +154,19 @@ class Population():
 	
 	# Taux d'élites possible, entre 0.0 et 1.0
 	ELITE_RATE = 0.3
+	
+	# Taille de la population, définie expérimentalement; ne doit pas être trop élevé, sinon peu efficace
+	SIZE = 40
 		
 	def __init__(self, cities):
 		''' génération de la population initiale aléatoirement '''
 		
-		self.size = 50 #min(4 * len(cities), 50)	# taille de la population
 		basic_solution = Solution(list(cities))	# solution originale
 		
 		self.solutions = [basic_solution]
 		
 		# génération des solutions restantes: copie de l'originale et ordonnancement aléatoire
-		for _ in range(self.size):
+		for _ in range(4 * Population.SIZE):
 			s = basic_solution.clone()
 			s.randomize()
 			self.solutions.append(s)
@@ -179,14 +180,14 @@ class Population():
 		self.solutions.sort(key=Solution.distance)
 		
 		# limite la taille de la population
-		self.solutions = self.solutions[:self.size]
+		self.solutions = self.solutions[:Population.SIZE]
 		
 	def update(self):
 		''' mise à jour de la population par sélection, croisement et mutation '''
 		
 		# sélection des élites
-		elite_rate = Population.ELITE_RATE# min(self.size / 100, Population.ELITE_RATE) #0.3 if self.size >= 30 else 0.2
-		elite = max(int(self.size * elite_rate), 1)
+		elite_rate = Population.ELITE_RATE
+		elite = max(int(Population.SIZE * elite_rate), 1)
 				
 		new_solutions = self.solutions[:elite]
 		
@@ -195,31 +196,25 @@ class Population():
 		
 		used = []
 		
-		while len(new_solutions) <= self.size:
+		while len(new_solutions) <= Population.SIZE:
 			a = self.roulette_selection()
 			b = self.roulette_selection()
 			
-# 			if a in used:
-# 				print("in = %d" %len(used))
-			
 			used.append(a)
 			used.append(b)
-			
+
+			# force le croisement si la sélection par roulette donne une solution déjà utilisée
 			force = a in used or b in used
-# 			if force:
-# 				print("force")
 			
-			#child1, child2 = a.crossover_ox(b)
+			#child1, child2 = a.crossover_ox(b, force)
 			child1 = a.crossover_greedy(b, force)
 			child2 = b.crossover_greedy(a, force)
 						
 			new_solutions.append(child1)
 			new_solutions.append(child2)
-			
-# 		print("FIN=%d VS %d" %(len(used), len(new_solutions)))
-# 		exit()
+				
 		# mutation dans la population (selon taux)
-		for s in new_solutions:
+		for s in new_solutions[1:]: # ne mute pas l'élite n° 1
 			s.mutate_swap()
 
 		# mise à jour de la population
@@ -229,32 +224,25 @@ class Population():
 	def roulette_selection(self):
 		''' sélection aléatoire par roulette d'une solution, les solutions les plus courtes ayant le plus de probabilité d'être choisie '''
 		
-		# distance maximum
-# 		max_dist = self.solutions[-1].distance()
+		# distance minimum, utilisée comme référence pour la somme utilisée par la roulette
 		min_dist = self.solutions[0].distance()
 		
 		# calcul de la somme
 		s = 0
 		for c in self.solutions:
-			#s += int(abs(c.distance() - max_dist))
 			s += min_dist / c.distance()
 		
-# 		print(s)
 		# choix nb aléatoire
-		#r = random.randint(0, s)
 		r = random.uniform(0, s)
-# 		print("R=%d" %r)
 		
 		# recherche de la sélection selon nb aléatoire
 		s = 0
 		selection = self.solutions[0]
 		
 		for c in self.solutions:		
-			#s += int(abs(c.distance() - max_dist))
 			s += min_dist / c.distance()
 			
 			if s >= r:
-# 				print("D=%d" %c.distance())
 				selection = c
 				break
 			
@@ -281,6 +269,9 @@ class Solution():
 	# Taux de croiseement en pourcent
 	# Plus efficace avec un grand taux, sinon cela créé de la stagnation
 	CROSSOVER_RATE = 75
+	
+	# Nombre d'essais maximum de mutation par swap pour trouver une distance de chemin résultante plus courte
+	MUTATION_RANDOM_TRY = 25
 
 	def __init__(self, cities):
 		''' initialisation de la solution '''
@@ -289,28 +280,34 @@ class Solution():
 		self._distance = None	# distance interne stockée après calcul
 				
 	def mutate_swap(self):
-		''' effectue une mutation de la solution (swap selon taux) en échangeant deux villes dans le chemin '''
+		''' 
+			Effectue une mutation de la solution (swap selon taux) en échangeant deux villes dans le chemin 
+			Ajoute une légère intelligence en essayant de trouver une mutation qui diminue la distance totale de chemin
+		'''
 
 		# taux de mutation
-		if random.randint(0, 100) >= Solution.MUTATION_RATE:
+		if random.randint(0, 100) > Solution.MUTATION_RATE:
 			return self
 		
 		old_distance = self.distance()
 		
-		# échange de 2 villes
-		for _ in range(3):
+		# échange de 2 villes, en essayant de trouver une nouvelle distance totale plus courte que l'ancienne
+		i = 0
+		while True:
 			ind1, ind2 = self.random_index()
 			self.cities[ind1], self.cities[ind2] = self.cities[ind2], self.cities[ind1]
 			
-			self._distance = None
-			if self.distance() < old_distance:
+			self._distance = None # reset distance
+			
+			# condition de fin de mutation: distance + courte ou trop d'essai
+			if self.distance() < old_distance or i >= Solution.MUTATION_RANDOM_TRY:
 				break
 			
 			else:
 				self.cities[ind1], self.cities[ind2] = self.cities[ind2], self.cities[ind1]
+				i += 1
 
-
-		#self._distance = None # reset distance stockée
+		self._distance = None # reset distance stockée
 		
 		return self
 		
@@ -318,7 +315,7 @@ class Solution():
 		''' effectue un croisement selon l'algorithme Greedy Subtour Crossover (GSX) et taux '''
 		
 		# taux de croisement
-		if not force and random.randint(0, 100) >= Solution.CROSSOVER_RATE:
+		if not force and random.randint(0, 100) > Solution.CROSSOVER_RATE:
 			return self.clone()
 
 		fa = True
@@ -362,11 +359,11 @@ class Solution():
 		# solution issue du croisement
 		return Solution(g)
 	
-	def crossover_ox(self, solution2):
+	def crossover_ox(self, solution2, force=False):
 		''' effectue un croisement OX entre la solution courante et la solution2, génèrant deux fils '''
 		
 		# taux
-		if random.randint(0, 100) >= Solution.CROSSOVER_RATE:
+		if not force and random.randint(0, 100) > Solution.CROSSOVER_RATE:
 			return self.clone(), solution2.clone()
 				
 		length = len(self.cities)
@@ -446,7 +443,6 @@ class Solution():
 		return str(self.cities)
 
 
-
 class Parser():
 	''' 
 		Classe effectuant la lecture d'une liste de villes 
@@ -463,6 +459,7 @@ class Parser():
 			for line in file:
 				name, x, y = line.split()
 				self.cities.append(City(name, int(x), int(y)))
+
 
 class City():
 	'''
@@ -484,6 +481,7 @@ class City():
 	
 	def __repr__(self):
 		return self.__str__()
+
 
 class Gui():
 	'''
@@ -601,3 +599,4 @@ if __name__ == '__main__':
 	
 	print("Distance totale:\n\t %d" %total_distance)
 	print("Villes à visiter dans l'ordre:\n\t %s" %str(cities))
+
