@@ -74,8 +74,8 @@ class PVC():
 		Résultats en sortie: total_distance, total_time, ordered_cities
 	'''
 	
-	# Facteur du nombre d'évolutions (selon taille) de la population avant d'évaluer la condition de stagnation 
-	FACTOR_END_SIZE = 10
+	# Nombre d'évolutions de la population avant d'évaluer la condition de stagnation 
+	STAGNATION_SIZE = 200
 	
 	# Epsylon de marge pour la condition de stagnation : si l'écart-type est <= EPSYLON, on a une stagnation
 	STD_EPSYLON = 1e-10
@@ -125,7 +125,7 @@ class PVC():
 		length = len(self.last_distances)
 		
 		# vérification de la population de fin par stagnation si au moins N derniers calculs
-		if length > PVC.FACTOR_END_SIZE * Population.SIZE:
+		if length > PVC.STAGNATION_SIZE:
 			# calcul de la moyenne et de l'écart-type avec les N dernières meilleures distances
 			mean_dist = sum(self.last_distances) / length
 			std_dev = math.sqrt(1 / length * sum([pow(x - mean_dist, 2) for x in self.last_distances]))
