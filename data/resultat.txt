@@ -50,3 +50,25 @@ data\pb050.txt (30s);4443;
 data\pb050.txt (60s);3559;
 data\pb100.txt (20s);11794; !!
 data\pb100.txt (90s);8425;  !!
+
+v6 
+
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb020.txt (10s);1882;
+data\pb050.txt (30s);3722;
+data\pb050.txt (60s);3545;
+data\pb100.txt (20s);9080;
+data\pb100.txt (90s);6180;
+
+v7
+
+data\pb005.txt (1s);903;
+data\pb010.txt (5s);1490;
+data\pb010.txt (10s);1490;
+data\pb020.txt (10s);2091;
+data\pb050.txt (30s);4467;
+data\pb050.txt (60s);3612;
+data\pb100.txt (20s);7907;
+data\pb100.txt (90s);6301;
